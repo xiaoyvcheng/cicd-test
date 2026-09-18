@@ -1,0 +1,16 @@
+[Unit]
+Description=CI/CD Demo Spring Boot (dev)
+After=network.target
+
+[Service]
+Type=simple
+User=cicd
+Group=cicd
+WorkingDirectory=/opt/cicd-demo
+EnvironmentFile=/etc/cicd-demo/dev.env
+ExecStart=/usr/bin/java -jar /opt/cicd-demo/cicd-demo.jar
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

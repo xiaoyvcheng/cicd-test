@@ -1,0 +1,23 @@
+# Maven
+app/target/
+.m2/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files with secrets
+deploy/compose/*/.env
+!deploy/compose/*/.env.example
+
+# Logs
+*.log
+.secrets/

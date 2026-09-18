@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: cicd-demo
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  name: cicd-demo
+  greeting: Hello from CI/CD demo
+  env: local

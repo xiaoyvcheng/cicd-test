@@ -1,0 +1,7 @@
+services:
+  app:
+    image: ${REGISTRY_IMAGE}:${IMAGE_TAG}
+    env_file: .env
+    ports:
+      - "8090:8080"
+    restart: unless-stopped

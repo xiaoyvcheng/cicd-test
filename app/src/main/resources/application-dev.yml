@@ -1,5 +1,5 @@
-server:
-  port: 8090
+# Port stays 8080 inside the container (compose maps host 8090→8080).
+# For systemd phase0 on the host, set SERVER_PORT=8090 in the env file.
 
 app:
   env: dev

@@ -30,8 +30,8 @@
 | 2 | 启用 GitLab Container Registry + Deploy Token | ✅ 完成 | 20～40 分 |
 | 3 | Jenkins：`registry-credentials` + 全局变量 | ✅ 完成 | 10～15 分 |
 | 4 | app-dev / app-prod：Docker + Compose 目录 + docker login | ✅ 完成 | 30～45 分 |
-| 5 | 恢复完整 `Jenkinsfile`（Docker 部署） | ✅ 完成（待 push） | 15～25 分 |
-| 6 | push `main` → 镜像 → 部署 8090 + 8091 | ⬜ 待做 | 20～40 分 |
+| 5 | 恢复完整 `Jenkinsfile`（Docker 部署） | ✅ 完成 | 15～25 分 |
+| 6 | push `main` → 镜像 → 部署 8090 + 8091 | 🟡 手工已通；待 push 修 pipeline 后变绿 | 20～40 分 |
 | 7 | tag `v*` → Approve → 部署 8092 | ⬜ 待做 | 15～30 分 |
 | 8 | 验收 + 回滚演练；补截图/踩坑 | ⬜ 待做 | 20～30 分 |
 
@@ -262,10 +262,13 @@ docker compose pull && docker compose up -d
 |---|------|------|------|------|
 | 1 | `Unable to locate package docker-compose-plugin` | Ubuntu 源无 compose plugin | 改装 `docker.io` + `docker-compose`（v1） | 2026-10-13 |
 | 2 | `docker compose` 命令不存在 | 仅有 v1 二进制 | Jenkinsfile 使用 `docker-compose` | 2026-10-13 |
+| 3 | `docker build` 拉 `eclipse-temurin` 失败：`connection refused` 到 docker.io | platform 无法直连 Docker Hub | `/etc/docker/daemon.json` 加 `registry-mirrors`（如 daocloud）后重启 docker | 2026-10-13 |
+| 4 | `docker-compose up`：`KeyError: 'ContainerConfig'` | compose v1.29 + Docker 29 recreate 不兼容 | 部署前 `docker-compose down` + `docker rm` 再 `up -d`（已写进 Jenkinsfile） | 2026-10-13 |
+| 5 | Compose 映射 `8090:8080` 但页面连不上 | `application-dev.yml` 把容器内端口改成 8090 | 去掉 profile 内 `server.port`；`.env` 加 `SERVER_PORT=8080`；systemd 用 `SERVER_PORT=8090` | 2026-10-13 |
 
 已知风险（实施前注意）：
 
-1. **8090 端口冲突**：阶段0 systemd 与 Compose 同时占 8090 → 验收 Compose 时再停 systemd（当前按约定先不停）。  
+1. **8090 端口冲突**：阶段0 systemd 与 Compose 同时占 8090 → 已 `systemctl stop`（sudoers 若无 stop，需 root 停一次）。  
 2. **docker permission denied**：`jenkins`/`deploy` 未进 docker 组或未重新登录。  
 3. **HTTP Registry 拉失败**：未配 `insecure-registries`。  
 4. **Webhook 不触发 tag**：未勾选 Tag push events。  
@@ -293,3 +296,4 @@ docs/images/phase1/
 | 2026-10-13 | 步骤3：Jenkins 已加 `registry-credentials`；全局变量 APP_PROD_HOST、REGISTRY_IMAGE |
 | 2026-10-13 | 步骤4：app-dev/app-prod 装 Docker+compose v1；Compose 目录与 docker login 完成；prod SSH deploy 密钥已配；app-prod 磁盘扩至 ~38G |
 | 2026-10-13 | 步骤5：仓库 `Jenkinsfile` 已改为阶段1（docker-compose）；**需本机 push 后生效** |
+| 2026-10-13 | 步骤6：镜像已推 Registry；手工 Compose 已起 **8090=dev / 8091=test**；systemd 已停；待 push：compose recreate 规避 + 去掉 dev 内嵌 8090 端口 |

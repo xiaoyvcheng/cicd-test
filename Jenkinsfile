@@ -68,6 +68,9 @@ pipeline {
               sed -i 's|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE_TAG|' .env
               sed -i 's|^REGISTRY_IMAGE=.*|REGISTRY_IMAGE=$REGISTRY_IMAGE|' .env
               export IMAGE_TAG=$IMAGE_TAG REGISTRY_IMAGE=$REGISTRY_IMAGE
+              # compose v1 + Docker 25+ recreate bug (KeyError ContainerConfig)
+              docker-compose down --remove-orphans || true
+              docker rm -f \$(docker ps -aq --filter name=cicd-demo-dev) 2>/dev/null || true
               docker-compose pull
               docker-compose up -d
             "
@@ -88,6 +91,8 @@ pipeline {
               sed -i 's|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE_TAG|' .env
               sed -i 's|^REGISTRY_IMAGE=.*|REGISTRY_IMAGE=$REGISTRY_IMAGE|' .env
               export IMAGE_TAG=$IMAGE_TAG REGISTRY_IMAGE=$REGISTRY_IMAGE
+              docker-compose down --remove-orphans || true
+              docker rm -f \$(docker ps -aq --filter name=cicd-demo-test) 2>/dev/null || true
               docker-compose pull
               docker-compose up -d
             "
@@ -115,6 +120,8 @@ pipeline {
               sed -i 's|^IMAGE_TAG=.*|IMAGE_TAG=$IMAGE_TAG|' .env
               sed -i 's|^REGISTRY_IMAGE=.*|REGISTRY_IMAGE=$REGISTRY_IMAGE|' .env
               export IMAGE_TAG=$IMAGE_TAG REGISTRY_IMAGE=$REGISTRY_IMAGE
+              docker-compose down --remove-orphans || true
+              docker rm -f \$(docker ps -aq --filter name=cicd-demo-prod) 2>/dev/null || true
               docker-compose pull
               docker-compose up -d
             "

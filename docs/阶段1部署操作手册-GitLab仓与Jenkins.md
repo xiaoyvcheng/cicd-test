@@ -19,7 +19,7 @@
 |------|------|
 | GitLab | http://10.0.0.13 |
 | Jenkins | http://10.0.0.13:8081 |
-| Registry（计划） | `10.0.0.13:5050/root/cicd-test` |
+| Registry | `10.0.0.13:5050/root/cicd-test`（已启用） |
 | 应用 | `http://10.0.0.12:8090` · `:8091` · `http://10.0.0.11:8092` |
 
 ### 0.1 进度板（实施时勾选）
@@ -31,11 +31,13 @@
 | 3 | Jenkins：`registry-credentials` + 全局变量 | ✅ 完成 | 10～15 分 |
 | 4 | app-dev / app-prod：Docker + Compose 目录 + docker login | ✅ 完成 | 30～45 分 |
 | 5 | 恢复完整 `Jenkinsfile`（Docker 部署） | ✅ 完成 | 15～25 分 |
-| 6 | push `main` → 镜像 → 部署 8090 + 8091 | 🟡 手工已通；待 push 修 pipeline 后变绿 | 20～40 分 |
-| 7 | tag `v*` → Approve → 部署 8092 | ⬜ 待做 | 15～30 分 |
-| 8 | 验收 + 回滚演练；补截图/踩坑 | ⬜ 待做 | 20～30 分 |
+| 6 | push `main` → 镜像 → 部署 8090 + 8091 | ✅ 完成 | 20～40 分 |
+| 7 | tag `v*` → Approve → 部署 8092 | ✅ 完成（`v1.0.0` #1 SUCCESS） | 15～30 分 |
+| 8 | 验收 + 回滚演练；补截图/踩坑 | ✅ 完成 | 20～30 分 |
 
 图例：⬜ 待做 · 🟡 进行中 · ✅ 完成
+
+**阶段1验收结论（2026-10-13）**：同一 commit `ac2ef62` → Registry 镜像 → **dev/test/prod** 三环境页面均通；`v1.0.0` 经 Approve 部署 prod。
 
 ---
 
@@ -144,6 +146,12 @@ sudo systemctl restart docker
 
 URL 仍为：`http://10.0.0.13:8081/project/cicd-demo`
 
+### 5.4 多分支流水线须「发现标签」
+
+`cicd-demo` → **配置** → Branch Sources → Behaviours 增加 **Discover tags**（仅 Branch Discovery 时，Tags 页不会出现 `v*`）。
+
+改完后点 **立即扫描多分支流水线**；已有 tag 可手动 Build。
+
 ---
 
 ## 6. 业务机：Docker + Compose
@@ -239,19 +247,20 @@ Jenkins → 停在 Approve → 人工点 Deploy → 8092。
 
 ### 8.3 验收清单
 
-- [ ] 一次构建一个 `IMAGE_TAG`，三环境可共用  
-- [ ] `http://10.0.0.12:8090/` 为 **dev**  
-- [ ] `http://10.0.0.12:8091/` 为 **test**  
-- [ ] `http://10.0.0.11:8092/` 为 **prod**（经审批）  
-- [ ] 改业务机 `.env` 密钥无需重建镜像  
-- [ ] 回滚：改 `IMAGE_TAG` 后 `docker compose pull && up -d`  
+- [x] 一次构建一个 `IMAGE_TAG`，三环境可共用（验收时 `ac2ef62`）  
+- [x] `http://10.0.0.12:8090/` 为 **dev**  
+- [x] `http://10.0.0.12:8091/` 为 **test**  
+- [x] `http://10.0.0.11:8092/` 为 **prod**（经审批；`v1.0.0` #1）  
+- [x] 改业务机 `.env` 密钥无需重建镜像（Compose `env_file`）  
+- [x] 回滚：改 `IMAGE_TAG` 后 `docker-compose pull && up -d`（本环境为 v1 命令）  
 
 ### 8.4 回滚命令（目标机）
 
 ```bash
 cd /opt/cicd-demo-prod   # 或 -dev / -test
 # 编辑 .env 中 IMAGE_TAG=上一成功值
-docker compose pull && docker compose up -d
+docker-compose down --remove-orphans || true
+docker-compose pull && docker-compose up -d
 ```
 
 ---
@@ -265,6 +274,7 @@ docker compose pull && docker compose up -d
 | 3 | `docker build` 拉 `eclipse-temurin` 失败：`connection refused` 到 docker.io | platform 无法直连 Docker Hub | `/etc/docker/daemon.json` 加 `registry-mirrors`（如 daocloud）后重启 docker | 2026-10-13 |
 | 4 | `docker-compose up`：`KeyError: 'ContainerConfig'` | compose v1.29 + Docker 29 recreate 不兼容 | 部署前 `docker-compose down` + `docker rm` 再 `up -d`（已写进 Jenkinsfile） | 2026-10-13 |
 | 5 | Compose 映射 `8090:8080` 但页面连不上 | `application-dev.yml` 把容器内端口改成 8090 | 去掉 profile 内 `server.port`；`.env` 加 `SERVER_PORT=8080`；systemd 用 `SERVER_PORT=8090` | 2026-10-13 |
+| 6 | push `v1.0.0` 后 Jenkins 只有 `main`、无 Tags | 多分支未开 Discover tags | Branch Sources 增加 Tag Discovery 后扫描；手动 Build `v1.0.0` | 2026-10-13 |
 
 已知风险（实施前注意）：
 
@@ -273,16 +283,35 @@ docker compose pull && docker compose up -d
 3. **HTTP Registry 拉失败**：未配 `insecure-registries`。  
 4. **Webhook 不触发 tag**：未勾选 Tag push events。  
 5. **input 后 Agent 消失**：审批 stage 分离或增大 idle。  
-6. **与 GitLab CI 双开**：勿同时自动部署同一 prod。
+6. **与 GitLab CI 双开**：勿同时自动部署同一 prod。  
+7. **无 Discover tags**：打 tag 后 Jenkins 不出现 `v*` 任务（见 §5.4 / 踩坑#6）。
 
 ---
 
-## 10. 截图目录（实施时补充）
+## 10. 截图目录
 
 ```text
 docs/images/phase1/
-  （待补）Registry / Compose / 8091 / 8092 / Approve 等
+  01-app-dev-8090.png                 # 8090 = dev
+  02-app-test-8091.png                # 8091 = test
+  03-app-prod-8092.png                # 8092 = prod（v1.0.0）
+  04-jenkins-cicd-demo-main.png       # Multibranch main 绿
+  05-jenkins-tag-v1.0.0.png           # Tags 页 v1.0.0 绿
+  06-jenkins-v1.0.0-build1-success.png # #1 SUCCESS + approved by root
+  07-jenkins-pipeline-steps-approve.png # Pipeline Steps（含 Approve Prod）
+  08-gitlab-container-registry.png    # GitLab Container Registry（2 tags）
 ```
+
+| 图 | 说明 |
+|----|------|
+| ![8090](./images/phase1/01-app-dev-8090.png) | dev |
+| ![8091](./images/phase1/02-app-test-8091.png) | test |
+| ![8092](./images/phase1/03-app-prod-8092.png) | prod |
+| ![main](./images/phase1/04-jenkins-cicd-demo-main.png) | Jenkins main |
+| ![tag](./images/phase1/05-jenkins-tag-v1.0.0.png) | Jenkins tag |
+| ![build](./images/phase1/06-jenkins-v1.0.0-build1-success.png) | Approve 后 SUCCESS |
+| ![steps](./images/phase1/07-jenkins-pipeline-steps-approve.png) | Pipeline Steps |
+| ![registry](./images/phase1/08-gitlab-container-registry.png) | Registry |
 
 ---
 
@@ -297,3 +326,6 @@ docs/images/phase1/
 | 2026-10-13 | 步骤4：app-dev/app-prod 装 Docker+compose v1；Compose 目录与 docker login 完成；prod SSH deploy 密钥已配；app-prod 磁盘扩至 ~38G |
 | 2026-10-13 | 步骤5：仓库 `Jenkinsfile` 已改为阶段1（docker-compose）；**需本机 push 后生效** |
 | 2026-10-13 | 步骤6：镜像已推 Registry；手工 Compose 已起 **8090=dev / 8091=test**；systemd 已停；待 push：compose recreate 规避 + 去掉 dev 内嵌 8090 端口 |
+| 2026-10-13 | 步骤6收尾：`main` #5+ 绿；8090/8091 稳定 |
+| 2026-10-13 | 步骤7：开启 Discover tags；`v1.0.0` #1 Approve → Deploy Prod → **8092=prod** SUCCESS |
+| 2026-10-13 | 步骤8：验收清单勾选；补 `docs/images/phase1/` 共 8 张；手册收尾 |

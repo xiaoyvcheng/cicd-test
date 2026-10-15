@@ -3,6 +3,7 @@
 > **目标**：同一镜像 → app-dev **8090(dev)** + **8091(test)**；打 `v*` tag → 人工 `input` → app-prod **8092(prod)**。  
 > **前提**：阶段 0 已通（GitLab 仓 + Jenkins + Webhook）。见 [阶段0部署操作手册-GitLab仓与Jenkins.md](./阶段0部署操作手册-GitLab仓与Jenkins.md)。  
 > **配套**：[jenkins-gitlab-small-company.md](./jenkins-gitlab-small-company.md) · [implement-jenkins.md](./implement-jenkins.md)  
+> **账号密码全文**：[环境凭据一览.md](./环境凭据一览.md)  
 > **文档约定**：实施过程中在本文件勾选进度、补踩坑、补截图（`docs/images/phase1/`）。
 
 ---
@@ -21,6 +22,19 @@
 | Jenkins | http://10.0.0.13:8081 |
 | Registry | `10.0.0.13:5050/root/cicd-test`（已启用） |
 | 应用 | `http://10.0.0.12:8090` · `:8091` · `http://10.0.0.11:8092` |
+
+### 0.2 登录账号（摘要）
+
+| 系统 | 地址 | 用户名 | 密码 |
+|------|------|--------|------|
+| GitLab | http://10.0.0.13 | `root` | `7ChvoInxILTnI5skTMTR` |
+| Jenkins | http://10.0.0.13:8081 | `root` | `yq4QnbJKVTUjwv4juBJZ` |
+| Registry / `docker login` | `10.0.0.13:5050` | `root` | PAT `3421b99f1706de819496017f65bb38e2c64e484a` |
+| Jenkins 凭据 `registry-credentials` | — | `root` | 同上 PAT |
+| Jenkins 凭据 `gitlab-credentials` | — | `root` | 同上 PAT |
+| SSH 部署 | `deploy@10.0.0.12` / `.11` | `deploy` | 私钥 `.secrets/cicd-deploy` |
+
+完整说明见 [环境凭据一览.md](./环境凭据一览.md)。
 
 ### 0.1 进度板（实施时勾选）
 
@@ -126,11 +140,13 @@ sudo systemctl restart docker
 
 ### 5.1 凭据
 
-| ID | 类型 | 用途 |
-|----|------|------|
-| `registry-credentials` | Username + Password | 推/拉镜像 |
+| ID | 类型 | Username / Secret | 用途 |
+|----|------|-------------------|------|
+| `registry-credentials` | Username + Password | `root` + PAT（见 [凭据一览](./环境凭据一览.md)） | 推/拉镜像 |
+| `gitlab-credentials` | Username + Password | `root` + 同上 PAT | 拉代码（阶段0已有） |
+| `deploy-ssh` | SSH Username with private key | `deploy` + `.secrets/cicd-deploy` | SSH 部署 |
 
-已有 `gitlab-credentials`、`deploy-ssh` 继续用。
+口令全文：[环境凭据一览.md](./环境凭据一览.md)。
 
 ### 5.2 全局环境变量（在 `APP_DEV_HOST` 之外增加）
 
@@ -198,7 +214,7 @@ sudo chmod 600 /opt/cicd-demo-prod/.env
 
 ```bash
 docker login 10.0.0.13:5050
-# 使用 Deploy Token 用户名/密码
+# 用户名 root，密码为 PAT（见 docs/环境凭据一览.md）
 ```
 
 三台凡要 pull 的机器都做一次（至少 app-dev、app-prod；platform 推送用 Jenkins 凭据）。
@@ -329,3 +345,4 @@ docs/images/phase1/
 | 2026-10-13 | 步骤6收尾：`main` #5+ 绿；8090/8091 稳定 |
 | 2026-10-13 | 步骤7：开启 Discover tags；`v1.0.0` #1 Approve → Deploy Prod → **8092=prod** SUCCESS |
 | 2026-10-13 | 步骤8：验收清单勾选；补 `docs/images/phase1/` 共 8 张；手册收尾 |
+| 2026-10-15 | 增补登录账号密码摘要；全文见 [环境凭据一览.md](./环境凭据一览.md) |

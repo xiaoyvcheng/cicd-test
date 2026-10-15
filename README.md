@@ -33,6 +33,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 | **实施手册** | [docs/implement-gitlab-ci.md](docs/implement-gitlab-ci.md) | [docs/implement-jenkins.md](docs/implement-jenkins.md)（运维照做；含 [§2 必须/建议/可选](docs/implement-jenkins.md#2-资源准备必须有--建议有--可选)） |
 | **阶段0操作手册** | — | [docs/阶段0部署操作手册-GitLab仓与Jenkins.md](docs/阶段0部署操作手册-GitLab仓与Jenkins.md)（含踩坑 + 截图） |
 | **阶段1操作手册** | — | [docs/阶段1部署操作手册-GitLab仓与Jenkins.md](docs/阶段1部署操作手册-GitLab仓与Jenkins.md)（Docker 三环境；已验收 + 截图） |
+| **环境凭据一览** | — | [docs/环境凭据一览.md](docs/环境凭据一览.md)（GitLab / Jenkins / PAT / SSH 账号密码） |
 
 ## 仓库结构
 

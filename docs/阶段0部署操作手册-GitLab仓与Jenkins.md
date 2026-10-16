@@ -202,11 +202,25 @@ sudo systemctl daemon-reload && sudo systemctl enable cicd-demo
 ## 7. Multibranch Job
 
 1. **New Item** → `cicd-demo` → **Multibranch Pipeline**
-2. **分支源 → + 增加源 → Git**
-   - URL：`http://10.0.0.13/root/cicd-test.git`
-   - Credentials：`gitlab-credentials`
-3. 脚本路径：`Jenkinsfile`
-4. **保存** → **Scan Multibranch Pipeline Now**
+2. **分支源（Branch Sources）→ + 增加源 → Git**
+   - **项目仓库**：`http://10.0.0.13/root/cicd-test.git`
+   - **凭据**：`gitlab-credentials`（`root` + PAT）
+   - **行为（Behaviors）** — 点 **+ Add**，至少加这两项：
+     | 行为 | 界面名 | 作用 |
+     |------|--------|------|
+     | Discover branches | **发现分支** | 扫描 `main` 等分支，日常 push 走这里 |
+     | Discover tags | **发现标签** | 扫描 `v*` 等 tag；阶段1 打 tag 部署 prod **必须有** |
+   - 默认往往只有「发现分支」；**创建 Job 时就把「发现标签」一起加上**，避免阶段1 再改配置、漏扫 tag。
+3. **构建设置**：脚本路径 `Jenkinsfile`（默认）
+4. **保存** → **立即扫描多分支流水线（Scan Multibranch Pipeline Now）**
+
+配置示意（分支源里已同时勾选发现分支 + 发现标签）：
+
+![分支源：发现分支与发现标签](./images/phase0/07-jenkins-discover-branches-tags.png)
+
+扫描后：
+- **Branches** 页会出现 `main`
+- **Tags** 页会出现已有 `v*`（没有 tag 时该页为空，属正常）
 
 分支页示例：
 
@@ -247,7 +261,7 @@ gitlab_rails['allow_local_requests_from_web_hooks_and_services'] = true
 
 | 项 | 值 |
 |----|-----|
-| URL | `http://10.0.0.13:8081/project/cicd-demo` |
+| URL | `http://root:<API_TOKEN>@10.0.0.13:8081/project/cicd-demo` |
 | Trigger | **Push events** |
 
 保存后 **Test → Push events**，期望 **HTTP 200**。
@@ -281,9 +295,9 @@ fatal: Unencrypted HTTP is not recommended...
 
 ## 10. 验收
 
-- [ ] Jenkins `cicd-demo` / `main` 构建绿色  
-- [ ] `http://10.0.0.12:8090/` 显示 **dev** / Hello from DEV  
-- [ ] `/api/info`、`/actuator/health` 正常  
+- [x] Jenkins `cicd-demo` / `main` 构建绿色  
+- [x] `http://10.0.0.12:8090/` 显示 **dev** / Hello from DEV  
+- [x] `/api/info`、`/actuator/health` 正常  
 
 ---
 
@@ -316,8 +330,14 @@ fatal: Unencrypted HTTP is not recommended...
 
 ### 11.6 Webhook 测试：`HTTP 403 anonymous is missing the Job/Build permission`
 
-**原因**：授权策略为「登录用户可做任何事」时，匿名无 Build 权限。  
-**处理**：改为 **安全矩阵**，给 `anonymous`：Overall Read + Job Read/Discover/Build；给管理员 `root`：Overall Administer。保存前务必给管理员赋权，避免锁死。
+**原因**：授权策略收紧后，匿名无 Build 权限（**推荐**：网页必须登录）。  
+**处理（推荐，2026-10-15 已落地）**：
+1. 安全矩阵：`anonymous` **不赋权**；`root` = Administer；`authenticated` = Job Read/Build 等  
+2. Jenkins 为 `root` 建 **API Token**（名如 `gitlab-webhook`）  
+3. GitLab Webhook URL 写成：`http://root:<API_TOKEN>@10.0.0.13:8081/project/cicd-demo`  
+
+**不推荐**：给 `anonymous` Job/Build（可未登录浏览/触发构建）。临时演示才可。  
+口令与 Token 见 [环境凭据一览.md](./环境凭据一览.md)。
 
 ### 11.7 保存安全配置：`No valid crumb was included`
 
@@ -373,4 +393,5 @@ docs/images/phase0/
   04-jenkins-main-green.png
   05-jenkins-build1.png
   06-gitlab-after-login.png
+  07-jenkins-discover-branches-tags.png   # 分支源：发现分支 + 发现标签
 ```

@@ -160,13 +160,24 @@ sudo systemctl restart docker
 
 确认 GitLab Webhook 已勾选 **Tag push events**（阶段0若只勾了 Push，请补上）。
 
-URL 仍为：`http://10.0.0.13:8081/project/cicd-demo`
+Jenkins 已收紧匿名权限后，URL **必须带 Basic Auth**（`root` + API Token）：
+
+```text
+http://root:<API_TOKEN>@10.0.0.13:8081/project/cicd-demo
+```
+
+Token 与说明见 [环境凭据一览.md](./环境凭据一览.md)。
 
 ### 5.4 多分支流水线须「发现标签」
 
-`cicd-demo` → **配置** → Branch Sources → Behaviours 增加 **Discover tags**（仅 Branch Discovery 时，Tags 页不会出现 `v*`）。
+阶段0 建 Multibranch 时建议在 **分支源 → 行为** 同时加：
 
-改完后点 **立即扫描多分支流水线**；已有 tag 可手动 Build。
+- **发现分支（Discover branches）**
+- **发现标签（Discover tags）**
+
+详见 [阶段0 §7](./阶段0部署操作手册-GitLab仓与Jenkins.md#7-multibranch-job)。
+
+若阶段0 只开了发现分支：打开 `cicd-demo` → **配置** → Branch Sources → **+ Add** → **Discover tags** → 保存 → **立即扫描多分支流水线**；已有 tag 可手动 Build。
 
 ---
 
@@ -346,3 +357,4 @@ docs/images/phase1/
 | 2026-10-13 | 步骤7：开启 Discover tags；`v1.0.0` #1 Approve → Deploy Prod → **8092=prod** SUCCESS |
 | 2026-10-13 | 步骤8：验收清单勾选；补 `docs/images/phase1/` 共 8 张；手册收尾 |
 | 2026-10-15 | 增补登录账号密码摘要；全文见 [环境凭据一览.md](./环境凭据一览.md) |
+| 2026-10-15 | Jenkins：去掉 anonymous 权限（网页必须登录）；Webhook 改 `root`+API Token Basic Auth；测试 HTTP 200 |
